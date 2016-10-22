@@ -6,40 +6,33 @@ import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
 class ScalaJob(sc: SparkContext) {
-  def run(filePath: String) : RDD[(String, String, String)] = {
-    //pass the file
-    val file = sc.textFile(filePath);
-    //find values in every raw
-    val values = file.map{
-      dataRaw =>
-      val p = dataRaw.split("[|]",-1)
-      (p(1), ScalaJob.processDate(p(2)), p(32))
-    }
+  import ScalaJob._
 
-    //count occurrences of same number
-//    val result = processData(values)
+  def run(cdrPath: String): RDD[(String, String)] = {
+    val valuesCdr = sc.textFile(cdrPath)
+      .map(_.split("\\|"))
+      .map(p => (p(1), processType(processTime(p(2)), p(32))))
 
-    return values
+    val result = valuesCdr.groupByKey().mapValues(countValues)
+
+    return result
   }
-
 }
 
-object ScalaJob{
-  //determine part of day
-  def processDate(s: String) : String = {
-    val date = DateTime.parse(s, DateTimeFormat.forPattern("yyyyMMddHHmmss"));
-    val hour = date.getHourOfDay
-    val h = hour match{
+object ScalaJob {
+  val dayParts = Map((6 to 11) -> 1, (12 to 18) -> 2, (19 to 23) -> 3, (0 to 5) -> 4)
 
-      //for morning
-      case hour if 6 to 11 contains(hour) => "1"
-      //for day
-      case hour if 12 to 18 contains(hour) => "2"
-      //for evening
-      case hour if 19 to 23 contains(hour) => "3"
-      //for night
-      case _ => "4"
-    }
-    return h
+  def processTime(s: String): Int = {
+    val hour = DateTime.parse(s, DateTimeFormat.forPattern("yyyyMMddHHmmss")).getHourOfDay
+    dayParts.filterKeys(_.contains(hour)).values.head
+  }
+
+  def processType(dayPart: Int, s: String): Int = s match {
+    case "S" => 2 * dayPart - 1
+    case "V" => 2 * dayPart
+  }
+
+  def countValues(l: Iterable[Int]): String = {
+    (1 to 8).map(i => (i + "_" + l.count(_ == i))).mkString(",")
   }
 }

@@ -22,10 +22,11 @@ class ScalaTest() {
 
   @Test
   def testExampleJobCode() {
-    val input = "src\\test\\resources\\cdr.csv"
+    val input1 = "src\\test\\resources\\cdr.csv"
+    val input2 = "src\\test\\resources\\DIM_SUBSCRIBER.csv"
     val output = "src\\test\\resources\\out"
     val job = new ScalaJob(sc)
-    val result = job.run(input)
+    val result = job.run(input1)
     result.saveAsTextFile(output)
   }
 }
