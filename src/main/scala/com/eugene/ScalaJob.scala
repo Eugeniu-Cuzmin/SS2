@@ -8,14 +8,20 @@ import org.joda.time.format.DateTimeFormat
 class ScalaJob(sc: SparkContext) {
   import ScalaJob._
 
-  def run(cdrPath: String): RDD[(String, String)] = {
+  def run(cdrPath: String, dimPath: String, cachePath: String): RDD[(String, (String, String))] = {
     val valuesCdr = sc.textFile(cdrPath)
-      .map(_.split("\\|"))
+      .map(_.split("\\|"))/*.filter(p => p(1).contains())*/
       .map(p => (p(1), processType(processTime(p(2)), p(32))))
+      .groupByKey()
+      .mapValues(countValues)
 
-    val result = valuesCdr.groupByKey().mapValues(countValues)
+    val valuesDim = sc.textFile(dimPath)
+      .map(_.split("\u0001"))
+      .filter(hasAS)
+      .map(p => (p(1),(p(0) + "," + p(3) + "," + p(4))))
 
-    return result
+    val joinResult = valuesCdr.join(valuesDim)
+    return joinResult
   }
 }
 
@@ -34,5 +40,9 @@ object ScalaJob {
 
   def countValues(l: Iterable[Int]): String = {
     (1 to 8).map(i => (i + "_" + l.count(_ == i))).mkString(",")
+  }
+
+  def hasAS (v : Array[String]) : Boolean = {
+    v(7).equals("S") || v(7).equals("A")
   }
 }
