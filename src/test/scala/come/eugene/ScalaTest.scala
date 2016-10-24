@@ -28,6 +28,6 @@ class ScalaTest() {
     val output = "src\\test\\resources\\out"
     val job = new ScalaJob(sc)
     val result = job.run(input1, input2, input3)
-    result.saveAsTextFile(output)
+//    result.saveAsTextFile(output)
   }
 }
