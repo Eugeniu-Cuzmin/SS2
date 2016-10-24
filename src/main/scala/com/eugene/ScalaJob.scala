@@ -9,7 +9,7 @@ class ScalaJob(sc: SparkContext) {
   import ScalaJob._
 
   def run(cdrPath: String, dimPath: String, cachePath: String): RDD[(String, (String, String))] = {
-    val valuesCache = sc.textFile(cachePath).map(_.split(" ")).map(p => (p(0), ""))/*.cache()*/
+    val valuesCache = sc.textFile(cachePath).map(_.split(" ")).map(p => (p(0), ""))
 
     val valuesCdr = sc.textFile(cdrPath)
       .map(_.split("\\|"))
@@ -19,14 +19,13 @@ class ScalaJob(sc: SparkContext) {
 
     val newValueCdr = valuesCdr.subtractByKey(valuesCdr.subtractByKey(valuesCache))
 
-    val valuesDim = sc.textFile(dimPath)
+    val result = sc.textFile(dimPath)
       .map(_.split("\u0001"))
       .filter(hasAS)
       .map(p => (p(1),(p(0) + "," + p(3) + "," + p(4))))
+      .join(newValueCdr)
 
-    val joinResult = newValueCdr.join(valuesDim)
-
-    return joinResult
+    return result
   }
 }
 
